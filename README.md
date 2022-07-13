@@ -1,6 +1,6 @@
 # chippy
 
-A simple and lightweight CHIP-8 emulator
+A simple and lightweight CHIP-8 emulator implementing the SUPER-CHIP specification with keyboard and sound support
 
 ## Compiling from source
 
@@ -20,7 +20,7 @@ The binary will be located in `target/release`.
 
 ```
 chippy 1.0.0
-A simple and lightweight CHIP-8 emulator
+A simple and lightweight CHIP-8 emulator implementing the SUPER-CHIP specification with keyboard and sound support
 
 USAGE:
     chippy.exe <ROM>

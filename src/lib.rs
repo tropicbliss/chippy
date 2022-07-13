@@ -121,6 +121,7 @@ impl CPU {
             let op_4 = opcode & 0x000F;
             self.next_instruction();
             match (op_1, op_2, op_3, op_4) {
+                (0, 0, 0, 0) => return Ok(()),
                 (0, 0, 0xE, 0) => self.cls(),
                 (0, 0, 0xE, 0xE) => self.ret(),
                 (0x1, _, _, _) => self.jp_addr(nnn),
