@@ -20,7 +20,7 @@ const FONT_SET: [u8; 80] = [
     0xf0, 0xe0, 0x90, 0x90, 0x90, 0xe0, 0xf0, 0x80, 0xf0, 0x80, 0xf0, 0xf0, 0x80, 0xf0, 0x80, 0x80,
 ];
 
-const NATIVE_KEY_MAP: [KeyCode; 16] = [
+const KEY_MAP: [KeyCode; 16] = [
     KeyCode::Key1,
     KeyCode::Key2,
     KeyCode::Key3,
@@ -107,6 +107,9 @@ impl CPU {
                 timer = 0;
             }
             self.set_keys();
+            for (idx, current_key) in KEY_MAP.into_iter().enumerate() {
+                self.keys.set(idx, is_key_down(current_key));
+            }
             let op_byte1 = self.memory[self.program_counter as usize] as u16;
             let op_byte2 = self.memory[self.program_counter as usize + 1] as u16;
             let opcode: u16 = op_byte1 << 8 | op_byte2;
@@ -206,9 +209,6 @@ impl CPU {
                 self.key_pressed = Some(idx);
                 break;
             }
-        }
-        for (idx, current_key) in NATIVE_KEY_MAP.into_iter().enumerate() {
-            self.keys.set(idx, is_key_down(current_key));
         }
     }
 
