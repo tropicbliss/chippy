@@ -2,7 +2,7 @@
 name = "chippy"
 version = "1.0.0"
 edition = "2021"
-description = "A simple and lightweight CHIP-8 emulator implementing the SUPER-CHIP specification with keyboard and sound support"
+description = "A simple and lightweight CHIP-8 emulator implementing the SUPER-CHIP specification, with audio and input support"
 
 [dependencies]
 anyhow = "1.0.58"
