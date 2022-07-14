@@ -101,11 +101,15 @@ impl CPU {
         let mut timer: u8 = 0;
         let mut halted = false;
         let mut error = false;
+        let mut is_step = false;
         loop {
             let op_byte1 = self.memory[self.program_counter as usize] as u16;
             let op_byte2 = self.memory[self.program_counter as usize + 1] as u16;
             let mut opcode: u16 = op_byte1 << 8 | op_byte2;
-            if !halted {
+            if !halted || is_step {
+                if is_step {
+                    is_step = false;
+                }
                 timer += 1;
                 if timer % 5 == 0 {
                     self.tick();
@@ -213,6 +217,11 @@ impl CPU {
                                 let text = if halted { "Play" } else { "Pause" };
                                 if ui.button(text).clicked() {
                                     halted = !halted;
+                                }
+                                if halted {
+                                    if ui.button("Step").clicked() {
+                                        is_step = true;
+                                    }
                                 }
                             } else {
                                 ui.label("A fatal error occurred!");
