@@ -117,15 +117,15 @@ impl CPU {
                 self.display_height = 64;
                 opcode = 0x12C0;
             }
-            let x = ((opcode & 0x0F00) >> 8) as u8;
-            let y = ((opcode & 0x00F0) >> 4) as u8;
-            let nnn = opcode & 0x0FFF;
-            let kk = (opcode & 0x00FF) as u8;
-            let n = (opcode & 0x000F) as u8;
             let op_1 = (opcode & 0xF000) >> 12;
             let op_2 = (opcode & 0x0F00) >> 8;
             let op_3 = (opcode & 0x00F0) >> 4;
             let op_4 = opcode & 0x000F;
+            let x = op_2 as u8;
+            let y = op_3 as u8;
+            let nnn = opcode & 0x0FFF;
+            let kk = (opcode & 0x00FF) as u8;
+            let n = op_4 as u8;
             self.next_instruction();
             match (op_1, op_2, op_3, op_4) {
                 (0, 0, 0, 0) => return Ok(()),
