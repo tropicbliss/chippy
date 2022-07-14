@@ -50,6 +50,8 @@ pub struct CPU {
     keys: FixedBitSet,
     display_width: u8,
     display_height: u8,
+    halted: bool,
+    error: bool,
 }
 
 impl CPU {
@@ -68,6 +70,8 @@ impl CPU {
             keys: FixedBitSet::with_capacity(16),
             display_width: 64,
             display_height: 32,
+            halted: false,
+            error: false,
         }
     }
 
@@ -97,76 +101,85 @@ impl CPU {
         Ok(())
     }
 
-    pub async fn run(&mut self) -> Result<(), Chip8Error> {
+    pub async fn run(&mut self, debug: bool) -> Result<(), Chip8Error> {
         let mut timer: u8 = 0;
         loop {
-            timer += 1;
-            if timer % 5 == 0 {
-                self.tick();
-                timer = 0;
-            }
-            for (idx, current_key) in KEY_MAP.into_iter().enumerate() {
-                self.keys.set(idx, is_key_down(current_key));
-            }
             let op_byte1 = self.memory[self.program_counter as usize] as u16;
             let op_byte2 = self.memory[self.program_counter as usize + 1] as u16;
             let mut opcode: u16 = op_byte1 << 8 | op_byte2;
-            if self.program_counter == 0x200 && opcode == 0x1260 {
-                // Init 64x64 hires mode
-                self.display_width = 64;
-                self.display_height = 64;
-                opcode = 0x12C0;
-                self.framebuffer = FixedBitSet::with_capacity(
-                    self.display_height as usize * self.display_width as usize,
-                );
-            }
-            let op_1 = (opcode & 0xF000) >> 12;
-            let op_2 = (opcode & 0x0F00) >> 8;
-            let op_3 = (opcode & 0x00F0) >> 4;
-            let op_4 = opcode & 0x000F;
-            let x = op_2 as u8;
-            let y = op_3 as u8;
-            let nnn = opcode & 0x0FFF;
-            let kk = (opcode & 0x00FF) as u8;
-            let n = op_4 as u8;
-            self.next_instruction();
-            match (op_1, op_2, op_3, op_4) {
-                (0, 0, 0, 0) => return Ok(()),
-                (0, 0, 0xE, 0) | (0, 2, 3, 0) => self.cls(),
-                (0, 0, 0xE, 0xE) => self.ret(),
-                (0x1, _, _, _) => self.jp_addr(nnn),
-                (0x2, _, _, _) => self.call_addr(nnn),
-                (0x3, _, _, _) => self.se_vx_nn(x, kk),
-                (0x4, _, _, _) => self.sne_vx_nn(x, kk),
-                (0x5, _, _, _) => self.se_vx_vy(x, y),
-                (0x6, _, _, _) => self.ld_vx_nn(x, kk),
-                (0x7, _, _, _) => self.add_vx_nn(x, kk),
-                (0x8, _, _, 0x0) => self.ld_vx_vy(x, y),
-                (0x8, _, _, 0x1) => self.or_vx_vy(x, y),
-                (0x8, _, _, 0x2) => self.and_vx_vy(x, y),
-                (0x8, _, _, 0x3) => self.xor_vx_vy(x, y),
-                (0x8, _, _, 0x4) => self.add_vx_vy(x, y),
-                (0x8, _, _, 0x5) => self.sub_vx_vy(x, y),
-                (0x8, _, _, 0x6) => self.shr_vx_vy(x),
-                (0x8, _, _, 0x7) => self.subn_vx_vy(x, y),
-                (0x8, _, _, 0xE) => self.shl_vx_vy(x),
-                (0x9, _, _, _) => self.sne_vx_vy(x, y),
-                (0xA, _, _, _) => self.ld_i_addr(nnn),
-                (0xB, _, _, _) => self.jp_v0_addr(nnn),
-                (0xC, _, _, _) => self.rnd_vx_nn(x, kk),
-                (0xD, _, _, _) => self.drw_vx_vy_n(x, y, n),
-                (0xE, _, 0x9, 0xE) => self.skp_vx(x),
-                (0xE, _, 0xA, 0x1) => self.sknp_vx(x),
-                (0xF, _, 0x0, 0x7) => self.ld_vx_dt(x),
-                (0xF, _, 0x0, 0xA) => self.ld_vx_n(x),
-                (0xF, _, 0x1, 0x5) => self.ld_dt_vx(x),
-                (0xF, _, 0x1, 0x8) => self.ld_st_vx(x),
-                (0xF, _, 0x1, 0xE) => self.add_i_vx(x),
-                (0xF, _, 0x2, 0x9) => self.ld_f_vx(x),
-                (0xF, _, 0x3, 0x3) => self.ld_b_vx(x),
-                (0xF, _, 0x5, 0x5) => self.ld_i_vx(x),
-                (0xF, _, 0x6, 0x5) => self.ld_vx_i(x),
-                _ => return Err(Chip8Error::IllegalInstruction(opcode)),
+            if !self.halted {
+                timer += 1;
+                if timer % 5 == 0 {
+                    self.tick();
+                    timer = 0;
+                }
+                for (idx, current_key) in KEY_MAP.into_iter().enumerate() {
+                    self.keys.set(idx, is_key_down(current_key));
+                }
+                if self.program_counter == 0x200 && opcode == 0x1260 {
+                    // Init 64x64 hires mode
+                    self.display_width = 64;
+                    self.display_height = 64;
+                    opcode = 0x12C0;
+                    self.framebuffer = FixedBitSet::with_capacity(
+                        self.display_height as usize * self.display_width as usize,
+                    );
+                }
+                let op_1 = (opcode & 0xF000) >> 12;
+                let op_2 = (opcode & 0x0F00) >> 8;
+                let op_3 = (opcode & 0x00F0) >> 4;
+                let op_4 = opcode & 0x000F;
+                let x = op_2 as u8;
+                let y = op_3 as u8;
+                let nnn = opcode & 0x0FFF;
+                let kk = (opcode & 0x00FF) as u8;
+                let n = op_4 as u8;
+                self.next_instruction();
+                match (op_1, op_2, op_3, op_4) {
+                    (0, 0, 0, 0) => return Ok(()),
+                    (0, 0, 0xE, 0) | (0, 2, 3, 0) => self.cls(),
+                    (0, 0, 0xE, 0xE) => self.ret(),
+                    (0x1, _, _, _) => self.jp_addr(nnn),
+                    (0x2, _, _, _) => self.call_addr(nnn),
+                    (0x3, _, _, _) => self.se_vx_nn(x, kk),
+                    (0x4, _, _, _) => self.sne_vx_nn(x, kk),
+                    (0x5, _, _, _) => self.se_vx_vy(x, y),
+                    (0x6, _, _, _) => self.ld_vx_nn(x, kk),
+                    (0x7, _, _, _) => self.add_vx_nn(x, kk),
+                    (0x8, _, _, 0x0) => self.ld_vx_vy(x, y),
+                    (0x8, _, _, 0x1) => self.or_vx_vy(x, y),
+                    (0x8, _, _, 0x2) => self.and_vx_vy(x, y),
+                    (0x8, _, _, 0x3) => self.xor_vx_vy(x, y),
+                    (0x8, _, _, 0x4) => self.add_vx_vy(x, y),
+                    (0x8, _, _, 0x5) => self.sub_vx_vy(x, y),
+                    (0x8, _, _, 0x6) => self.shr_vx_vy(x),
+                    (0x8, _, _, 0x7) => self.subn_vx_vy(x, y),
+                    (0x8, _, _, 0xE) => self.shl_vx_vy(x),
+                    (0x9, _, _, _) => self.sne_vx_vy(x, y),
+                    (0xA, _, _, _) => self.ld_i_addr(nnn),
+                    (0xB, _, _, _) => self.jp_v0_addr(nnn),
+                    (0xC, _, _, _) => self.rnd_vx_nn(x, kk),
+                    (0xD, _, _, _) => self.drw_vx_vy_n(x, y, n),
+                    (0xE, _, 0x9, 0xE) => self.skp_vx(x),
+                    (0xE, _, 0xA, 0x1) => self.sknp_vx(x),
+                    (0xF, _, 0x0, 0x7) => self.ld_vx_dt(x),
+                    (0xF, _, 0x0, 0xA) => self.ld_vx_n(x),
+                    (0xF, _, 0x1, 0x5) => self.ld_dt_vx(x),
+                    (0xF, _, 0x1, 0x8) => self.ld_st_vx(x),
+                    (0xF, _, 0x1, 0xE) => self.add_i_vx(x),
+                    (0xF, _, 0x2, 0x9) => self.ld_f_vx(x),
+                    (0xF, _, 0x3, 0x3) => self.ld_b_vx(x),
+                    (0xF, _, 0x5, 0x5) => self.ld_i_vx(x),
+                    (0xF, _, 0x6, 0x5) => self.ld_vx_i(x),
+                    _ => {
+                        if debug {
+                            self.halted = true;
+                            self.error = true;
+                        } else {
+                            return Err(Chip8Error::IllegalInstruction(opcode));
+                        }
+                    }
+                }
             }
             let mut idx = 0;
             let width_multiplier = screen_width() / self.display_width as f32;
@@ -184,6 +197,23 @@ impl CPU {
                     );
                     idx += 1;
                 }
+            }
+            if debug {
+                egui_macroquad::ui(|egui_ctx| {
+                    egui::Window::new("Debug Menu").show(egui_ctx, |ui| {
+                        ui.label(format!("FPS: {}", get_fps()));
+                        ui.label(format!("Opcode: 0x{opcode:04x}"));
+                        if !self.error {
+                            let text = if self.halted { "Play" } else { "Pause" };
+                            if ui.button(text).clicked() {
+                                self.halted = !self.halted;
+                            }
+                        } else {
+                            ui.label("A fatal error occurred!");
+                        }
+                    });
+                });
+                egui_macroquad::draw();
             }
             next_frame().await;
         }

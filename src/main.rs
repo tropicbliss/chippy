@@ -8,7 +8,7 @@ async fn main() -> Result<()> {
     let args = Args::parse();
     let mut cpu = CPU::new().await;
     cpu.load(args.rom)?;
-    cpu.run().await?;
+    cpu.run(args.debug).await?;
     Ok(())
 }
 
@@ -17,4 +17,8 @@ async fn main() -> Result<()> {
 struct Args {
     /// Path to the ROM binary
     rom: PathBuf,
+
+    /// Enable debug menu
+    #[clap(short, long)]
+    debug: bool,
 }
