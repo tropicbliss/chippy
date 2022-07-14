@@ -7,7 +7,7 @@ use macroquad::{
 use std::{fs::File, io::ErrorKind, path::Path};
 use thiserror::Error;
 
-const BEEP_SOUND: &[u8] = include_bytes!("../assets/beep.wav");
+const BEEP_SOUND: &[u8] = include_bytes!("../assets/sound.wav");
 
 const FONT_SET: [u8; 80] = [
     0xf0, 0x90, 0x90, 0x90, 0xf0, 0x20, 0x60, 0x20, 0x20, 0x70, 0xf0, 0x10, 0xf0, 0x80, 0xf0, 0xf0,
@@ -45,7 +45,6 @@ pub struct CPU {
     sound_timer: u8,
     delay_timer: u8,
     index_register: u16,
-    sound_enabled: bool,
     framebuffer: FixedBitSet,
     sound: Sound,
     keys: FixedBitSet,
@@ -64,7 +63,6 @@ impl CPU {
             sound_timer: 0,
             delay_timer: 0,
             index_register: 0,
-            sound_enabled: false,
             framebuffer: FixedBitSet::with_capacity((64 * 32) as usize),
             sound: audio::load_sound_from_bytes(BEEP_SOUND).await.unwrap(),
             keys: FixedBitSet::with_capacity(16),
@@ -198,10 +196,6 @@ impl CPU {
         audio::play_sound_once(self.sound.clone());
     }
 
-    fn disable_sound(&self) {
-        audio::stop_sound(self.sound.clone());
-    }
-
     fn draw_pixel(&mut self, x: usize, y: usize, value: u8) -> bool {
         let idx = y * self.display_width as usize + x;
         let collision = self.framebuffer[idx];
@@ -215,9 +209,6 @@ impl CPU {
         }
         if self.sound_timer > 0 {
             self.sound_timer -= 1;
-        } else if self.sound_enabled {
-            self.disable_sound();
-            self.sound_enabled = false;
         }
     }
 
@@ -428,7 +419,6 @@ impl CPU {
     fn ld_st_vx(&mut self, x: u8) {
         self.sound_timer = self.registers[x as usize];
         if self.sound_timer > 0 {
-            self.sound_enabled = true;
             self.enable_sound();
         }
     }
