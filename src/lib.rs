@@ -367,7 +367,8 @@ impl CPU {
 
     // Dxyn - Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision
     fn drw_vx_vy_n(&mut self, x: u8, y: u8, n: u8) {
-        let mut collision = false;
+        // If no pixels are erased, set VF to 0
+        self.registers[0xF] = 0;
         // The interpreter reads n bytes from memory, starting at the address stored in I
         for i in 0..n {
             let line = self.memory[self.index_register as usize + i as usize];
@@ -380,12 +381,11 @@ impl CPU {
                     let x = (self.registers[x as usize] as usize + position) % DISPLAY_WIDTH; // wrap around width
                     let y = (self.registers[y as usize] as usize + i as usize) % DISPLAY_HEIGHT; // wrap around height
                     if self.draw_pixel(x, y, value) {
-                        collision = true;
+                        self.registers[0xF] = 1;
                     }
                 }
             }
         }
-        self.registers[0xF] = if collision { 1 } else { 0 };
     }
 
     // Ex9E - Skip next instruction if key with the value of Vx is pressed
@@ -446,7 +446,7 @@ impl CPU {
     fn ld_b_vx(&mut self, x: u8) {
         self.memory[self.index_register as usize] = self.registers[x as usize] / 100;
         self.memory[self.index_register as usize + 1] = (self.registers[x as usize] / 10) % 10;
-        self.memory[self.index_register as usize + 2] = (self.registers[x as usize] / 100) % 10;
+        self.memory[self.index_register as usize + 2] = self.registers[x as usize] % 10;
     }
 
     // Fx55 - Store registers V0 through Vx in memory starting at location I
