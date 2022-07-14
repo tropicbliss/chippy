@@ -206,8 +206,7 @@ impl CPU {
                         if debug > 1 {
                             ui.label(format!("Opcode: 0x{opcode:04x}"));
                             if debug > 2 {
-                                for idx in 0..16 {
-                                    let register = self.registers[idx];
+                                for (idx, register) in self.registers.iter().enumerate() {
                                     ui.label(format!("V{idx}: {register}"));
                                 }
                                 ui.label(format!("PC: {}", self.program_counter));
