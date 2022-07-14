@@ -52,7 +52,6 @@ pub struct CPU {
     framebuffer: FixedBitSet,
     sound: Sound,
     keys: FixedBitSet,
-    key_pressed: Option<u8>,
 }
 
 impl CPU {
@@ -70,7 +69,6 @@ impl CPU {
             framebuffer: FixedBitSet::with_capacity((DISPLAY_WIDTH * DISPLAY_HEIGHT) as usize),
             sound: audio::load_sound_from_bytes(BEEP_SOUND).await.unwrap(),
             keys: FixedBitSet::with_capacity(16),
-            key_pressed: None,
         }
     }
 
@@ -106,7 +104,6 @@ impl CPU {
                 self.tick();
                 timer = 0;
             }
-            self.set_keys();
             for (idx, current_key) in KEY_MAP.into_iter().enumerate() {
                 self.keys.set(idx, is_key_down(current_key));
             }
@@ -200,16 +197,6 @@ impl CPU {
         let collision = self.framebuffer[idx];
         self.framebuffer.set(idx, (value == 1) ^ collision);
         collision
-    }
-
-    fn set_keys(&mut self) {
-        self.key_pressed = None;
-        for idx in 0..16 {
-            if self.keys[idx as usize] {
-                self.key_pressed = Some(idx);
-                break;
-            }
-        }
     }
 
     fn tick(&mut self) {
@@ -409,10 +396,14 @@ impl CPU {
 
     // Fx0A - Wait for a key press, store the value of the key in Vx
     fn ld_vx_n(&mut self, x: u8) {
-        if let Some(keypress) = self.key_pressed {
-            self.registers[x as usize] = keypress;
-        } else {
-            self.undo_instruction();
+        self.undo_instruction();
+        for idx in 0..16 {
+            let key = self.keys[idx as usize];
+            if key {
+                self.registers[x as usize] = idx;
+                self.next_instruction();
+                break;
+            }
         }
     }
 
