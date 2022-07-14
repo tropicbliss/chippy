@@ -204,7 +204,7 @@ impl CPU {
                     egui::Window::new("Debug Menu").show(egui_ctx, |ui| {
                         ui.label(format!("FPS: {}", get_fps()));
                         if debug > 1 {
-                            ui.label(disassembler(opcode).as_ref());
+                            ui.label(disassemble(opcode).as_ref());
                             for (idx, register) in self.registers.into_iter().enumerate() {
                                 ui.label(format!("V{idx}: {register}"));
                             }
@@ -501,7 +501,7 @@ impl CPU {
     }
 }
 
-fn disassembler(opcode: u16) -> Cow<'static, str> {
+fn disassemble(opcode: u16) -> Cow<'static, str> {
     let op_1 = (opcode & 0xF000) >> 12;
     let op_2 = (opcode & 0x0F00) >> 8;
     let op_3 = (opcode & 0x00F0) >> 4;
