@@ -50,8 +50,6 @@ pub struct CPU {
     keys: FixedBitSet,
     display_width: usize,
     display_height: usize,
-    halted: bool,
-    error: bool,
 }
 
 impl CPU {
@@ -70,8 +68,6 @@ impl CPU {
             keys: FixedBitSet::with_capacity(16),
             display_width: 64,
             display_height: 32,
-            halted: false,
-            error: false,
         }
     }
 
@@ -103,11 +99,13 @@ impl CPU {
 
     pub async fn run(&mut self, debug: u8) -> Result<(), Chip8Error> {
         let mut timer: u8 = 0;
+        let mut halted = false;
+        let mut error = false;
         loop {
             let op_byte1 = self.memory[self.program_counter as usize] as u16;
             let op_byte2 = self.memory[self.program_counter as usize + 1] as u16;
             let mut opcode: u16 = op_byte1 << 8 | op_byte2;
-            if !self.halted {
+            if !halted {
                 timer += 1;
                 if timer % 5 == 0 {
                     self.tick();
@@ -174,8 +172,8 @@ impl CPU {
                         if debug == 0 {
                             return Err(Chip8Error::IllegalInstruction(opcode));
                         } else {
-                            self.halted = true;
-                            self.error = true;
+                            halted = true;
+                            error = true;
                         }
                     }
                 }
@@ -211,10 +209,10 @@ impl CPU {
                                 ui.label(format!("PC: {}", self.program_counter));
                                 ui.label(format!("I: {}", self.index_register));
                             }
-                            if !self.error {
-                                let text = if self.halted { "Play" } else { "Pause" };
+                            if !error {
+                                let text = if halted { "Play" } else { "Pause" };
                                 if ui.button(text).clicked() {
-                                    self.halted = !self.halted;
+                                    halted = !halted;
                                 }
                             } else {
                                 ui.label("A fatal error occurred!");
