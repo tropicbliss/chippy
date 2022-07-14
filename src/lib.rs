@@ -116,6 +116,9 @@ impl CPU {
                 self.display_width = 64;
                 self.display_height = 64;
                 opcode = 0x12C0;
+                self.framebuffer = FixedBitSet::with_capacity(
+                    self.display_height as usize * self.display_width as usize,
+                );
             }
             let op_1 = (opcode & 0xF000) >> 12;
             let op_2 = (opcode & 0x0F00) >> 8;
@@ -129,9 +132,8 @@ impl CPU {
             self.next_instruction();
             match (op_1, op_2, op_3, op_4) {
                 (0, 0, 0, 0) => return Ok(()),
-                (0, 0, 0xE, 0) => self.cls(),
+                (0, 0, 0xE, 0) | (0, 2, 3, 0) => self.cls(),
                 (0, 0, 0xE, 0xE) => self.ret(),
-                (0, 2, 3, 0) => self.cls_hires(),
                 (0x1, _, _, _) => self.jp_addr(nnn),
                 (0x2, _, _, _) => self.call_addr(nnn),
                 (0x3, _, _, _) => self.se_vx_nn(x, kk),
@@ -236,13 +238,6 @@ impl CPU {
     fn ret(&mut self) {
         self.stack_pointer -= 1;
         self.program_counter = self.stack[self.stack_pointer as usize];
-    }
-
-    // 0230 - Clear hires display
-    fn cls_hires(&mut self) {
-        self.framebuffer =
-            FixedBitSet::with_capacity(self.display_height as usize * self.display_width as usize);
-        self.clear_display();
     }
 
     // 1nnn - Jump to location nnn
