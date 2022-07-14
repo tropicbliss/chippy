@@ -1,6 +1,6 @@
 # chippy
 
-A simple and lightweight CHIP-8 emulator implementing the SUPER-CHIP specification, with audio and input support.
+A simple and lightweight CHIP-8 emulator implementing the SUPER-CHIP specification, with audio and input support. Also supports hires roms.
 
 ## Compiling from source
 

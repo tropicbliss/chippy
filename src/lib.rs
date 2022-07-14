@@ -7,9 +7,6 @@ use macroquad::{
 use std::{fs::File, io::ErrorKind, path::Path};
 use thiserror::Error;
 
-const DISPLAY_WIDTH: usize = 64;
-const DISPLAY_HEIGHT: usize = 32;
-
 const BEEP_SOUND: &[u8] = include_bytes!("../assets/beep.wav");
 
 const FONT_SET: [u8; 80] = [
@@ -52,6 +49,8 @@ pub struct CPU {
     framebuffer: FixedBitSet,
     sound: Sound,
     keys: FixedBitSet,
+    display_width: usize,
+    display_height: usize,
 }
 
 impl CPU {
@@ -66,9 +65,11 @@ impl CPU {
             delay_timer: 0,
             index_register: 0,
             sound_enabled: false,
-            framebuffer: FixedBitSet::with_capacity((DISPLAY_WIDTH * DISPLAY_HEIGHT) as usize),
+            framebuffer: FixedBitSet::with_capacity((64 * 32) as usize),
             sound: audio::load_sound_from_bytes(BEEP_SOUND).await.unwrap(),
             keys: FixedBitSet::with_capacity(16),
+            display_width: 64,
+            display_height: 32,
         }
     }
 
@@ -109,7 +110,13 @@ impl CPU {
             }
             let op_byte1 = self.memory[self.program_counter as usize] as u16;
             let op_byte2 = self.memory[self.program_counter as usize + 1] as u16;
-            let opcode: u16 = op_byte1 << 8 | op_byte2;
+            let mut opcode: u16 = op_byte1 << 8 | op_byte2;
+            if self.program_counter == 0x200 && opcode == 0x1260 {
+                // Init 64x64 hires mode
+                self.display_width = 64;
+                self.display_height = 64;
+                opcode = 0x12C0;
+            }
             let x = ((opcode & 0x0F00) >> 8) as u8;
             let y = ((opcode & 0x00F0) >> 4) as u8;
             let nnn = opcode & 0x0FFF;
@@ -124,6 +131,7 @@ impl CPU {
                 (0, 0, 0, 0) => return Ok(()),
                 (0, 0, 0xE, 0) => self.cls(),
                 (0, 0, 0xE, 0xE) => self.ret(),
+                (0, 2, 3, 0) => self.cls_hires(),
                 (0x1, _, _, _) => self.jp_addr(nnn),
                 (0x2, _, _, _) => self.call_addr(nnn),
                 (0x3, _, _, _) => self.se_vx_nn(x, kk),
@@ -159,10 +167,10 @@ impl CPU {
                 _ => return Err(Chip8Error::IllegalInstruction(opcode)),
             }
             let mut idx = 0;
-            let width_multiplier = screen_width() / DISPLAY_WIDTH as f32;
-            let height_multiplier = screen_height() / DISPLAY_HEIGHT as f32;
-            for row in 0..DISPLAY_HEIGHT {
-                for col in 0..DISPLAY_WIDTH {
+            let width_multiplier = screen_width() / self.display_width as f32;
+            let height_multiplier = screen_height() / self.display_height as f32;
+            for row in 0..self.display_height {
+                for col in 0..self.display_width {
                     let cell = self.framebuffer[idx];
                     let colour = if cell { GREEN } else { BLACK };
                     draw_rectangle(
@@ -193,7 +201,7 @@ impl CPU {
     }
 
     fn draw_pixel(&mut self, x: usize, y: usize, value: u8) -> bool {
-        let idx = y * DISPLAY_WIDTH + x;
+        let idx = y * self.display_width + x;
         let collision = self.framebuffer[idx];
         self.framebuffer.set(idx, (value == 1) ^ collision);
         collision
@@ -228,6 +236,12 @@ impl CPU {
     fn ret(&mut self) {
         self.stack_pointer -= 1;
         self.program_counter = self.stack[self.stack_pointer as usize];
+    }
+
+    // 0230 - Clear hires display
+    fn cls_hires(&mut self) {
+        self.framebuffer = FixedBitSet::with_capacity(self.display_height * self.display_width);
+        self.clear_display();
     }
 
     // 1nnn - Jump to location nnn
@@ -365,8 +379,9 @@ impl CPU {
                 let value = line >> (7 - position) & 0x01;
                 if value == 1 {
                     // If this causes any pixels to be erased, VF is set to 1
-                    let x = (self.registers[x as usize] as usize + position) % DISPLAY_WIDTH; // wrap around width
-                    let y = (self.registers[y as usize] as usize + i as usize) % DISPLAY_HEIGHT; // wrap around height
+                    let x = (self.registers[x as usize] as usize + position) % self.display_width; // wrap around width
+                    let y =
+                        (self.registers[y as usize] as usize + i as usize) % self.display_height; // wrap around height
                     if self.draw_pixel(x, y, value) {
                         self.registers[0xF] = 1;
                     }
