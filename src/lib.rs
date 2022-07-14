@@ -4,7 +4,7 @@ use macroquad::{
     audio::{self, Sound},
     prelude::*,
 };
-use std::{fs::File, io::ErrorKind, path::Path};
+use std::{borrow::Cow, fs::File, io::ErrorKind, path::Path};
 use thiserror::Error;
 
 const BEEP_SOUND: &[u8] = include_bytes!("../assets/sound.wav");
@@ -99,7 +99,7 @@ impl CPU {
 
     pub async fn run(&mut self, debug: u8) -> Result<(), Chip8Error> {
         let mut timer: u8 = 0;
-        let mut halted = false;
+        let mut halted = debug > 0;
         let mut error = false;
         let mut is_step = false;
         loop {
@@ -204,14 +204,12 @@ impl CPU {
                     egui::Window::new("Debug Menu").show(egui_ctx, |ui| {
                         ui.label(format!("FPS: {}", get_fps()));
                         if debug > 1 {
-                            ui.label(format!("Opcode: 0x{opcode:04x}"));
-                            if debug > 2 {
-                                for (idx, register) in self.registers.into_iter().enumerate() {
-                                    ui.label(format!("V{idx}: {register}"));
-                                }
-                                ui.label(format!("PC: {}", self.program_counter));
-                                ui.label(format!("I: {}", self.index_register));
+                            ui.label(disassembler(opcode).as_ref());
+                            for (idx, register) in self.registers.into_iter().enumerate() {
+                                ui.label(format!("V{idx}: {register}"));
                             }
+                            ui.label(format!("PC: {}", self.program_counter));
+                            ui.label(format!("I: {}", self.index_register));
                             if !error {
                                 let text = if halted { "Play" } else { "Pause" };
                                 if ui.button(text).clicked() {
@@ -500,6 +498,54 @@ impl CPU {
             &self.memory
                 [(self.index_register as usize)..(self.index_register + x as u16 + 1) as usize],
         );
+    }
+}
+
+fn disassembler(opcode: u16) -> Cow<'static, str> {
+    let op_1 = (opcode & 0xF000) >> 12;
+    let op_2 = (opcode & 0x0F00) >> 8;
+    let op_3 = (opcode & 0x00F0) >> 4;
+    let op_4 = opcode & 0x000F;
+    let x = op_2 as u8;
+    let y = op_3 as u8;
+    let nnn = opcode & 0x0FFF;
+    let kk = (opcode & 0x00FF) as u8;
+    let n = op_4 as u8;
+    match (op_1, op_2, op_3, op_4) {
+        (0, 0, 0xE, 0) => "CLS".into(),
+        (0, 0, 0xE, 0xE) => "RET".into(),
+        (0x1, _, _, _) => format!("JP 0x{nnn:04x}").into(),
+        (0x2, _, _, _) => format!("CALL 0x{nnn:04x}").into(),
+        (0x3, _, _, _) => format!("SE V{n} {kk}").into(),
+        (0x4, _, _, _) => format!("SNE V{n} {kk}").into(),
+        (0x5, _, _, _) => format!("SE V{x} V{y}").into(),
+        (0x6, _, _, _) => format!("LD V{x} {kk}").into(),
+        (0x7, _, _, _) => format!("ADD V{x} {kk}").into(),
+        (0x8, _, _, 0x0) => format!("LD V{x} V{y}").into(),
+        (0x8, _, _, 0x1) => format!("OR V{x} V{y}").into(),
+        (0x8, _, _, 0x2) => format!("AND V{x} V{y}").into(),
+        (0x8, _, _, 0x3) => format!("XOR V{x} V{y}").into(),
+        (0x8, _, _, 0x4) => format!("ADD V{x} V{y}").into(),
+        (0x8, _, _, 0x5) => format!("SUB V{x} V{y}").into(),
+        (0x8, _, _, 0x6) => format!("SHR V{x}").into(),
+        (0x8, _, _, 0x7) => format!("SUBN V{x} V{y}").into(),
+        (0x8, _, _, 0xE) => format!("SHL V{x}").into(),
+        (0x9, _, _, _) => format!("SNE V{x} V{y}").into(),
+        (0xA, _, _, _) => format!("LDI {nnn}").into(),
+        (0xB, _, _, _) => format!("JP V0 + {nnn}").into(),
+        (0xC, _, _, _) => format!("RND {kk}").into(),
+        (0xD, _, _, _) => format!("DRW V{x} V{y} {n}").into(),
+        (0xE, _, 0x9, 0xE) => format!("SKP V{x}").into(),
+        (0xE, _, 0xA, 0x1) => format!("SKNP V{x}").into(),
+        (0xF, _, 0x0, 0x7) => format!("LD V{x} DT").into(),
+        (0xF, _, 0x0, 0xA) => format!("LD V{x} K").into(),
+        (0xF, _, 0x1, 0x5) => format!("LD DT, V{x}").into(),
+        (0xF, _, 0x1, 0xE) => format!("ADD I, V{x}").into(),
+        (0xF, _, 0x2, 0x9) => format!("LD F, V{x}").into(),
+        (0xF, _, 0x3, 0x3) => format!("LD B, V{x}").into(),
+        (0xF, _, 0x5, 0x5) => format!("LD [I], {x}").into(),
+        (0xF, _, 0x6, 0x5) => format!("LD {x}, [I]").into(),
+        _ => "-".into(),
     }
 }
 
