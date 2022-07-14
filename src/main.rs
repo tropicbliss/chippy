@@ -18,7 +18,7 @@ struct Args {
     /// Path to the ROM binary
     rom: PathBuf,
 
-    /// Enable debug menu
-    #[clap(short, long)]
-    debug: bool,
+    /// Enable debug menu (spamming this increases verbosity)
+    #[clap(short, long, action = clap::ArgAction::Count)]
+    debug: u8,
 }

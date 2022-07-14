@@ -101,7 +101,7 @@ impl CPU {
         Ok(())
     }
 
-    pub async fn run(&mut self, debug: bool) -> Result<(), Chip8Error> {
+    pub async fn run(&mut self, debug: u8) -> Result<(), Chip8Error> {
         let mut timer: u8 = 0;
         loop {
             let op_byte1 = self.memory[self.program_counter as usize] as u16;
@@ -172,11 +172,11 @@ impl CPU {
                     (0xF, _, 0x5, 0x5) => self.ld_i_vx(x),
                     (0xF, _, 0x6, 0x5) => self.ld_vx_i(x),
                     _ => {
-                        if debug {
+                        if debug == 0 {
+                            return Err(Chip8Error::IllegalInstruction(opcode));
+                        } else {
                             self.halted = true;
                             self.error = true;
-                        } else {
-                            return Err(Chip8Error::IllegalInstruction(opcode));
                         }
                     }
                 }
@@ -198,24 +198,28 @@ impl CPU {
                     idx += 1;
                 }
             }
-            if debug {
+            if debug > 0 {
                 egui_macroquad::ui(|egui_ctx| {
                     egui::Window::new("Debug Menu").show(egui_ctx, |ui| {
                         ui.label(format!("FPS: {}", get_fps()));
-                        ui.label(format!("Opcode: 0x{opcode:04x}"));
-                        for idx in 0..16 {
-                            let register = self.registers[idx];
-                            ui.label(format!("V{idx}: {register}"));
-                        }
-                        ui.label(format!("PC: {}", self.program_counter));
-                        ui.label(format!("I: {}", self.index_register));
-                        if !self.error {
-                            let text = if self.halted { "Play" } else { "Pause" };
-                            if ui.button(text).clicked() {
-                                self.halted = !self.halted;
+                        if debug > 1 {
+                            ui.label(format!("Opcode: 0x{opcode:04x}"));
+                            if debug > 2 {
+                                for idx in 0..16 {
+                                    let register = self.registers[idx];
+                                    ui.label(format!("V{idx}: {register}"));
+                                }
+                                ui.label(format!("PC: {}", self.program_counter));
+                                ui.label(format!("I: {}", self.index_register));
+                                if !self.error {
+                                    let text = if self.halted { "Play" } else { "Pause" };
+                                    if ui.button(text).clicked() {
+                                        self.halted = !self.halted;
+                                    }
+                                } else {
+                                    ui.label("A fatal error occurred!");
+                                }
                             }
-                        } else {
-                            ui.label("A fatal error occurred!");
                         }
                     });
                 });
