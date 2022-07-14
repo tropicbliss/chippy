@@ -1,6 +1,6 @@
 # chippy
 
-Chippy is a cross-platform CHIP-8 emulator that aims to be simple and lightweight. It has audio and input support, and comes with hires ROM support and a highly-configurable debug menu as a bonus.
+Chippy is a cross-platform CHIP-8 emulator that aims to be simple and lightweight. It has audio and input support, and comes with hires ROM support and a debug menu as a bonus.
 
 ## Usage
 
