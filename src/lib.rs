@@ -512,7 +512,7 @@ fn disassembler(opcode: u16) -> Cow<'static, str> {
     let kk = (opcode & 0x00FF) as u8;
     let n = op_4 as u8;
     match (op_1, op_2, op_3, op_4) {
-        (0, 0, 0xE, 0) => "CLS".into(),
+        (0, 0, 0xE, 0) | (0, 2, 3, 0) => "CLS".into(),
         (0, 0, 0xE, 0xE) => "RET".into(),
         (0x1, _, _, _) => format!("JP 0x{nnn:04x}").into(),
         (0x2, _, _, _) => format!("CALL 0x{nnn:04x}").into(),
@@ -540,6 +540,7 @@ fn disassembler(opcode: u16) -> Cow<'static, str> {
         (0xF, _, 0x0, 0x7) => format!("LD V{x} DT").into(),
         (0xF, _, 0x0, 0xA) => format!("LD V{x} K").into(),
         (0xF, _, 0x1, 0x5) => format!("LD DT, V{x}").into(),
+        (0xF, _, 0x1, 0x8) => format!("LD ST, V{x}").into(),
         (0xF, _, 0x1, 0xE) => format!("ADD I, V{x}").into(),
         (0xF, _, 0x2, 0x9) => format!("LD F, V{x}").into(),
         (0xF, _, 0x3, 0x3) => format!("LD B, V{x}").into(),
