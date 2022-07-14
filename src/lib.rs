@@ -211,14 +211,14 @@ impl CPU {
                                 }
                                 ui.label(format!("PC: {}", self.program_counter));
                                 ui.label(format!("I: {}", self.index_register));
-                                if !self.error {
-                                    let text = if self.halted { "Play" } else { "Pause" };
-                                    if ui.button(text).clicked() {
-                                        self.halted = !self.halted;
-                                    }
-                                } else {
-                                    ui.label("A fatal error occurred!");
+                            }
+                            if !self.error {
+                                let text = if self.halted { "Play" } else { "Pause" };
+                                if ui.button(text).clicked() {
+                                    self.halted = !self.halted;
                                 }
+                            } else {
+                                ui.label("A fatal error occurred!");
                             }
                         }
                     });
