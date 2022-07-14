@@ -48,8 +48,8 @@ pub struct CPU {
     framebuffer: FixedBitSet,
     sound: Sound,
     keys: FixedBitSet,
-    display_width: u8,
-    display_height: u8,
+    display_width: usize,
+    display_height: usize,
     halted: bool,
     error: bool,
 }
@@ -76,9 +76,9 @@ impl CPU {
     }
 
     pub fn load<P: AsRef<Path>>(&mut self, path: P) -> Result<(), Chip8Error> {
-        const MEMORY_START: u16 = 0x200;
+        const MEMORY_START: usize = 0x200;
         let mut file = File::open(path.as_ref())?;
-        let mut opcodes = [0; 4096 - MEMORY_START as usize];
+        let mut opcodes = [0; 4096 - MEMORY_START];
         let mut idx = 0;
         loop {
             let result = file.read_u8();
@@ -96,7 +96,7 @@ impl CPU {
             self.memory[idx] = f;
         }
         for (idx, d) in opcodes.into_iter().enumerate() {
-            self.memory[MEMORY_START as usize + idx] = d;
+            self.memory[MEMORY_START + idx] = d;
         }
         Ok(())
     }
@@ -121,9 +121,8 @@ impl CPU {
                     self.display_width = 64;
                     self.display_height = 64;
                     opcode = 0x12C0;
-                    self.framebuffer = FixedBitSet::with_capacity(
-                        self.display_height as usize * self.display_width as usize,
-                    );
+                    self.framebuffer =
+                        FixedBitSet::with_capacity(self.display_height * self.display_width);
                 }
                 let op_1 = (opcode & 0xF000) >> 12;
                 let op_2 = (opcode & 0x0F00) >> 8;
@@ -239,7 +238,7 @@ impl CPU {
     }
 
     fn draw_pixel(&mut self, x: usize, y: usize, value: u8) -> bool {
-        let idx = y * self.display_width as usize + x;
+        let idx = y * self.display_width + x;
         let collision = self.framebuffer[idx];
         self.framebuffer.set(idx, (value == 1) ^ collision);
         collision
@@ -408,10 +407,9 @@ impl CPU {
                 let value = line >> (7 - position) & 0x01;
                 if value == 1 {
                     // If this causes any pixels to be erased, VF is set to 1
-                    let x = (self.registers[x as usize] as usize + position)
-                        % self.display_width as usize; // wrap around width
-                    let y = (self.registers[y as usize] as usize + i as usize)
-                        % self.display_height as usize; // wrap around height
+                    let x = (self.registers[x as usize] as usize + position) % self.display_width; // wrap around width
+                    let y =
+                        (self.registers[y as usize] as usize + i as usize) % self.display_height; // wrap around height
                     if self.draw_pixel(x, y, value) {
                         self.registers[0xF] = 1;
                     }
