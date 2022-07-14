@@ -99,7 +99,7 @@ impl CPU {
 
     pub async fn run(&mut self, debug: u8) -> Result<(), Chip8Error> {
         let mut timer: u8 = 0;
-        let mut halted = debug > 0;
+        let mut halted = debug > 1;
         let mut error = false;
         let mut is_step = false;
         loop {
