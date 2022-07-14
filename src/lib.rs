@@ -203,6 +203,12 @@ impl CPU {
                     egui::Window::new("Debug Menu").show(egui_ctx, |ui| {
                         ui.label(format!("FPS: {}", get_fps()));
                         ui.label(format!("Opcode: 0x{opcode:04x}"));
+                        for idx in 0..16 {
+                            let register = self.registers[idx];
+                            ui.label(format!("V{idx}: {register}"));
+                        }
+                        ui.label(format!("PC: {}", self.program_counter));
+                        ui.label(format!("I: {}", self.index_register));
                         if !self.error {
                             let text = if self.halted { "Play" } else { "Pause" };
                             if ui.button(text).clicked() {
