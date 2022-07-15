@@ -2,6 +2,8 @@
 name = "uncheckedarray"
 version = "0.1.0"
 edition = "2021"
+publish = false
+description = "Do not use this crate in production, i repeat"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

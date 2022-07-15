@@ -4,12 +4,15 @@ pub struct UncheckedArray<const N: usize, T> {
     array: [T; N],
 }
 
+/// D:
 impl<const N: usize, T> UncheckedArray<N, T> {
+    /// Pls no
     pub fn new(array: [T; N]) -> Self {
         Self { array }
     }
 }
 
+/// Naurr
 impl<const N: usize, T> Index<usize> for UncheckedArray<N, T> {
     type Output = T;
 
@@ -29,6 +32,7 @@ pub struct UncheckedVec<T> {
 }
 
 impl<T> UncheckedVec<T> {
+    /// Do not use this
     pub fn new(vec: Vec<T>) -> Self {
         Self { vec }
     }
@@ -38,6 +42,7 @@ impl<T> UncheckedVec<T> {
     }
 }
 
+/// D:
 impl<T> Index<usize> for UncheckedVec<T> {
     type Output = T;
 
@@ -46,6 +51,7 @@ impl<T> Index<usize> for UncheckedVec<T> {
     }
 }
 
+/// Naurr
 impl<T> IndexMut<usize> for UncheckedVec<T> {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         unsafe { self.vec.get_unchecked_mut(index) }
