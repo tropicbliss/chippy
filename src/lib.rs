@@ -1,10 +1,10 @@
-use byteorder::ReadBytesExt;
 use egui::{Align, Color32, ScrollArea};
 use macroquad::{
     audio::{self, Sound},
     prelude::*,
+    rand::{gen_range, srand},
 };
-use std::{borrow::Cow, fs::File, io::ErrorKind, path::Path};
+use std::borrow::Cow;
 use thiserror::Error;
 use uncheckedarray::{UncheckedArray, UncheckedVec};
 
@@ -55,6 +55,7 @@ pub struct CPU {
 
 impl CPU {
     pub async fn new() -> Self {
+        srand(macroquad::miniquad::date::now() as _);
         Self {
             registers: unsafe { UncheckedArray::new([0; 16]) },
             program_counter: 0x200,
@@ -76,22 +77,18 @@ impl CPU {
         }
     }
 
-    pub fn load<P: AsRef<Path>>(&mut self, path: P) -> Result<(), Chip8Error> {
+    pub async fn load(&mut self, path: &str) -> Result<(), Chip8Error> {
         const MEMORY_START: usize = 0x200;
         for (idx, f) in FONT_SET.into_iter().enumerate() {
             self.memory[idx] = f;
         }
-        let mut file = File::open(path.as_ref())?;
-        for idx in 0..(4096 - MEMORY_START) {
-            let result = file.read_u8();
-            let opcode = match result {
-                Ok(op) => op,
-                Err(e) if e.kind() == ErrorKind::UnexpectedEof => {
-                    break;
-                }
-                Err(e) => return Err(e.into()),
-            };
-            self.memory[MEMORY_START + idx] = opcode;
+        let data = load_file(path).await?;
+        let mut bytes = [0; (4096 - MEMORY_START)];
+        for (idx, byte) in data.into_iter().enumerate() {
+            bytes[idx] = byte;
+        }
+        for (idx, byte) in bytes.into_iter().enumerate() {
+            self.memory[MEMORY_START + idx] = byte;
         }
         Ok(())
     }
@@ -435,7 +432,7 @@ impl CPU {
 
     // Cxnn - Set Vx = random byte AND nn
     fn rnd_vx_nn(&mut self, x: u8, nn: u8) {
-        let random = fastrand::u8(0..=u8::MAX);
+        let random = gen_range(0, u8::MAX);
         self.registers[x as usize] = random & nn;
     }
 
@@ -594,7 +591,7 @@ fn disassemble(opcode: u16) -> Cow<'static, str> {
 #[derive(Error, Debug)]
 pub enum Chip8Error {
     #[error("error reading file")]
-    Io(#[from] std::io::Error),
+    Io(#[from] FileError),
 
     #[error("illegal instruction: {0:04x}")]
     IllegalInstruction(u16),
