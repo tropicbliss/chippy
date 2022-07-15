@@ -211,7 +211,7 @@ impl CPU {
                             ui.label(format!("PC: {}", self.program_counter));
                             ui.label(format!("I: {}", self.index_register));
                             if !error {
-                                let text = if halted { "Play" } else { "Pause" };
+                                let text = if halted { "Start" } else { "Stop" };
                                 if ui.button(text).clicked() {
                                     halted = !halted;
                                 }
