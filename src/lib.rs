@@ -1,11 +1,11 @@
 use byteorder::ReadBytesExt;
-use fixedbitset::FixedBitSet;
 use macroquad::{
     audio::{self, Sound},
     prelude::*,
 };
 use std::{borrow::Cow, fs::File, io::ErrorKind, path::Path};
 use thiserror::Error;
+use uncheckedarray::{UncheckedArray, UncheckedVec};
 
 const BEEP_SOUND: &[u8] = include_bytes!("../assets/sound.wav");
 
@@ -37,17 +37,17 @@ const KEY_MAP: [KeyCode; 16] = [
 ];
 
 pub struct CPU {
-    registers: [u8; 16],
+    registers: UncheckedArray<16, u8>,
     program_counter: u16,
-    memory: [u8; 4096],
-    stack: [u16; 16],
+    memory: UncheckedArray<4096, u8>,
+    stack: UncheckedArray<16, u16>,
     stack_pointer: u8,
     sound_timer: u8,
     delay_timer: u8,
     index_register: u16,
-    framebuffer: FixedBitSet,
+    framebuffer: UncheckedVec<bool>,
     sound: Sound,
-    keys: FixedBitSet,
+    keys: UncheckedArray<16, bool>,
     display_width: usize,
     display_height: usize,
 }
@@ -55,17 +55,21 @@ pub struct CPU {
 impl CPU {
     pub async fn new() -> Self {
         Self {
-            registers: [0; 16],
+            registers: UncheckedArray::new([0; 16]),
             program_counter: 0x200,
-            memory: [0; 4096],
-            stack: [0; 16],
+            memory: UncheckedArray::new([0; 4096]),
+            stack: UncheckedArray::new([0; 16]),
             stack_pointer: 0,
             sound_timer: 0,
             delay_timer: 0,
             index_register: 0,
-            framebuffer: FixedBitSet::with_capacity((64 * 32) as usize),
-            sound: audio::load_sound_from_bytes(BEEP_SOUND).await.unwrap(),
-            keys: FixedBitSet::with_capacity(16),
+            framebuffer: UncheckedVec::new(vec![false; 64 * 32]),
+            sound: unsafe {
+                audio::load_sound_from_bytes(BEEP_SOUND)
+                    .await
+                    .unwrap_unchecked()
+            },
+            keys: UncheckedArray::new([false; 16]),
             display_width: 64,
             display_height: 32,
         }
@@ -116,7 +120,7 @@ impl CPU {
                     timer = 0;
                 }
                 for (idx, current_key) in KEY_MAP.into_iter().enumerate() {
-                    self.keys.set(idx, is_key_down(current_key));
+                    self.keys[idx] = is_key_down(current_key);
                 }
                 if self.program_counter == 0x200 && opcode == 0x1260 {
                     // Init 64x64 hires mode
@@ -124,7 +128,7 @@ impl CPU {
                     self.display_height = 64;
                     opcode = 0x12C0;
                     self.framebuffer =
-                        FixedBitSet::with_capacity(self.display_height * self.display_width);
+                        UncheckedVec::new(vec![false; self.display_height * self.display_width]);
                 }
                 let op_1 = (opcode & 0xF000) >> 12;
                 let op_2 = (opcode & 0x0F00) >> 8;
@@ -205,7 +209,8 @@ impl CPU {
                         ui.label(format!("FPS: {}", get_fps()));
                         if debug > 1 {
                             ui.label(disassemble(opcode).as_ref());
-                            for (idx, register) in self.registers.into_iter().enumerate() {
+                            for idx in 0..16 {
+                                let register = self.registers[idx];
                                 ui.label(format!("V{idx}: {register}"));
                             }
                             ui.label(format!("PC: {}", self.program_counter));
@@ -244,7 +249,7 @@ impl CPU {
     fn draw_pixel(&mut self, x: usize, y: usize, value: u8) -> bool {
         let idx = y * self.display_width + x;
         let collision = self.framebuffer[idx];
-        self.framebuffer.set(idx, (value == 1) ^ collision);
+        self.framebuffer[idx] = (value == 1) ^ collision;
         collision
     }
 
@@ -488,16 +493,16 @@ impl CPU {
 
     // Fx55 - Store registers V0 through Vx in memory starting at location I
     fn ld_i_vx(&mut self, x: u8) {
-        self.memory[(self.index_register as usize)..(self.index_register + x as u16 + 1) as usize]
-            .copy_from_slice(&self.registers[0..(x as usize + 1)]);
+        for idx in 0..x {
+            self.memory[self.index_register as usize + idx as usize] = self.registers[idx as usize];
+        }
     }
 
     // Fx65 - Read registers V0 through Vx from memory starting at location I
     fn ld_vx_i(&mut self, x: u8) {
-        self.registers[0..(x as usize + 1)].copy_from_slice(
-            &self.memory
-                [(self.index_register as usize)..(self.index_register + x as u16 + 1) as usize],
-        );
+        for idx in 0..x {
+            self.registers[idx as usize] = self.memory[self.index_register as usize + idx as usize];
+        }
     }
 }
 

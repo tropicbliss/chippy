@@ -11,6 +11,6 @@ clap = { version = "3.2.10", features = ["derive"] }
 egui = "0.18.1"
 egui-macroquad = { path = "crates/egui-macroquad" }
 fastrand = "1.7.0"
-fixedbitset = "0.4.2"
 macroquad = "0.3.23"
 thiserror = "1.0.31"
+uncheckedarray = { path = "crates/uncheckedarray" }

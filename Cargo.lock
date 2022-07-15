@@ -154,9 +154,9 @@ dependencies = [
  "egui",
  "egui-macroquad",
  "fastrand",
- "fixedbitset",
  "macroquad",
  "thiserror",
+ "uncheckedarray",
 ]
 
 [[package]]
@@ -340,12 +340,6 @@ checksum = "c3fcf0cee53519c866c09b5de1f6c56ff9d647101f81c1964fa632e148896cdf"
 dependencies = [
  "instant",
 ]
-
-[[package]]
-name = "fixedbitset"
-version = "0.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0ce7134b9999ecaf8bcd65542e436736ef32ddca1b3e06094cb6ec5755203b80"
 
 [[package]]
 name = "fontdue"
@@ -1008,6 +1002,10 @@ name = "ttf-parser"
 version = "0.15.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7b3e06c9b9d80ed6b745c7159c40b311ad2916abb34a49e9be2653b90db0d8dd"
+
+[[package]]
+name = "uncheckedarray"
+version = "0.1.0"
 
 [[package]]
 name = "unicode-ident"
