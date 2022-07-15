@@ -493,14 +493,14 @@ impl CPU {
 
     // Fx55 - Store registers V0 through Vx in memory starting at location I
     fn ld_i_vx(&mut self, x: u8) {
-        for idx in 0..x {
+        for idx in 0..=x {
             self.memory[self.index_register as usize + idx as usize] = self.registers[idx as usize];
         }
     }
 
     // Fx65 - Read registers V0 through Vx from memory starting at location I
     fn ld_vx_i(&mut self, x: u8) {
-        for idx in 0..x {
+        for idx in 0..=x {
             self.registers[idx as usize] = self.memory[self.index_register as usize + idx as usize];
         }
     }
