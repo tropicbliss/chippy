@@ -1,7 +1,6 @@
 use anyhow::Result;
 use chippy::CPU;
 use clap::Parser;
-use macroquad::rand::{gen_range, srand};
 use std::path::PathBuf;
 
 #[macroquad::main("Chippy")]
