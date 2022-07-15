@@ -1,10 +1,10 @@
 use std::ops::{Index, IndexMut};
 
+/// Do not use this
 pub struct UncheckedArray<const N: usize, T> {
     array: [T; N],
 }
 
-/// D:
 impl<const N: usize, T> UncheckedArray<N, T> {
     /// Pls no
     pub fn new(array: [T; N]) -> Self {
@@ -12,7 +12,6 @@ impl<const N: usize, T> UncheckedArray<N, T> {
     }
 }
 
-/// Naurr
 impl<const N: usize, T> Index<usize> for UncheckedArray<N, T> {
     type Output = T;
 
@@ -27,22 +26,23 @@ impl<const N: usize, T> IndexMut<usize> for UncheckedArray<N, T> {
     }
 }
 
+/// D:
 pub struct UncheckedVec<T> {
     vec: Vec<T>,
 }
 
 impl<T> UncheckedVec<T> {
-    /// Do not use this
+    /// Naurr
     pub fn new(vec: Vec<T>) -> Self {
         Self { vec }
     }
 
+    /// Ok
     pub fn clear(&mut self) {
         self.vec.clear();
     }
 }
 
-/// D:
 impl<T> Index<usize> for UncheckedVec<T> {
     type Output = T;
 
@@ -51,7 +51,6 @@ impl<T> Index<usize> for UncheckedVec<T> {
     }
 }
 
-/// Naurr
 impl<T> IndexMut<usize> for UncheckedVec<T> {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         unsafe { self.vec.get_unchecked_mut(index) }
