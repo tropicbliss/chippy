@@ -1,4 +1,5 @@
 use byteorder::ReadBytesExt;
+use egui::{Align, Color32, ScrollArea};
 use macroquad::{
     audio::{self, Sound},
     prelude::*,
@@ -208,28 +209,66 @@ impl CPU {
                     egui::Window::new("Debug Menu").show(egui_ctx, |ui| {
                         ui.label(format!("FPS: {}", get_fps()));
                         if debug > 1 {
-                            ui.label(disassemble(opcode).as_ref());
-                            for idx in 0..16 {
-                                let register = self.registers[idx];
-                                ui.label(format!("V{idx}: {register}"));
-                            }
-                            ui.label(format!("PC: {}", self.program_counter));
-                            ui.label(format!("I: {}", self.index_register));
-                            if !error {
-                                ui.horizontal(|ui| {
-                                    let text = if halted { "Start" } else { "Stop" };
-                                    if ui.button(text).clicked() {
-                                        halted = !halted;
-                                    }
-                                    if halted {
-                                        if ui.button("Step").clicked() {
-                                            is_step = true;
+                            ui.separator();
+                            let scroll_area = ScrollArea::vertical()
+                                .max_height(200.0)
+                                .auto_shrink([false; 2]);
+                            scroll_area.show(ui, |ui| {
+                                ui.vertical(|ui| {
+                                    let mut address = 0x200;
+                                    while address < 4096 {
+                                        let op_byte1 = self.memory[address] as u16;
+                                        let op_byte2 = self.memory[address + 1] as u16;
+                                        let opcode: u16 = op_byte1 << 8 | op_byte2;
+                                        if self.program_counter as usize == address {
+                                            let response = ui.colored_label(
+                                                Color32::YELLOW,
+                                                format!(
+                                                    "0x{address:04x} - {}",
+                                                    disassemble(opcode)
+                                                ),
+                                            );
+                                            response.scroll_to_me(Some(Align::Min));
+                                        } else {
+                                            ui.label(format!(
+                                                "0x{address:04x} - {}",
+                                                disassemble(opcode)
+                                            ));
                                         }
+                                        address += 2;
                                     }
                                 });
-                            } else {
-                                ui.label("A fatal error occurred!");
-                            }
+                            });
+                            ui.separator();
+                            ui.horizontal(|ui| {
+                                ui.vertical(|ui| {
+                                    for idx in 0..16 {
+                                        let register = self.registers[idx];
+                                        ui.label(format!("V{idx}: {register}"));
+                                    }
+                                });
+                                ui.separator();
+                                ui.vertical(|ui| {
+                                    ui.label(format!("PC: {}", self.program_counter));
+                                    ui.label(format!("I: {}", self.index_register));
+                                });
+                                ui.separator();
+                                ui.vertical(|ui| {
+                                    if !error {
+                                        let text = if halted { "Start" } else { "Stop" };
+                                        if ui.button(text).clicked() {
+                                            halted = !halted;
+                                        }
+                                        if halted {
+                                            if ui.button("Step").clicked() {
+                                                is_step = true;
+                                            }
+                                        }
+                                    } else {
+                                        ui.label("A fatal error occurred!");
+                                    }
+                                })
+                            });
                         }
                     });
                 });
