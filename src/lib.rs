@@ -78,10 +78,11 @@ impl CPU {
 
     pub fn load<P: AsRef<Path>>(&mut self, path: P) -> Result<(), Chip8Error> {
         const MEMORY_START: usize = 0x200;
+        for (idx, f) in FONT_SET.into_iter().enumerate() {
+            self.memory[idx] = f;
+        }
         let mut file = File::open(path.as_ref())?;
-        let mut opcodes = [0; 4096 - MEMORY_START];
-        let mut idx = 0;
-        loop {
+        for idx in 0..(4096 - MEMORY_START) {
             let result = file.read_u8();
             let opcode = match result {
                 Ok(op) => op,
@@ -90,14 +91,7 @@ impl CPU {
                 }
                 Err(e) => return Err(e.into()),
             };
-            opcodes[idx] = opcode;
-            idx += 1;
-        }
-        for (idx, f) in FONT_SET.into_iter().enumerate() {
-            self.memory[idx] = f;
-        }
-        for (idx, d) in opcodes.into_iter().enumerate() {
-            self.memory[MEMORY_START + idx] = d;
+            self.memory[MEMORY_START + idx] = opcode;
         }
         Ok(())
     }
