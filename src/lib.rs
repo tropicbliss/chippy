@@ -216,15 +216,17 @@ impl CPU {
                             ui.label(format!("PC: {}", self.program_counter));
                             ui.label(format!("I: {}", self.index_register));
                             if !error {
-                                let text = if halted { "Start" } else { "Stop" };
-                                if ui.button(text).clicked() {
-                                    halted = !halted;
-                                }
-                                if halted {
-                                    if ui.button("Step").clicked() {
-                                        is_step = true;
+                                ui.horizontal(|ui| {
+                                    let text = if halted { "Start" } else { "Stop" };
+                                    if ui.button(text).clicked() {
+                                        halted = !halted;
                                     }
-                                }
+                                    if halted {
+                                        if ui.button("Step").clicked() {
+                                            is_step = true;
+                                        }
+                                    }
+                                });
                             } else {
                                 ui.label("A fatal error occurred!");
                             }
