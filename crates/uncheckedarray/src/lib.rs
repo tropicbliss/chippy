@@ -7,7 +7,7 @@ pub struct UncheckedArray<const N: usize, T> {
 
 impl<const N: usize, T> UncheckedArray<N, T> {
     /// Pls no
-    pub fn new(array: [T; N]) -> Self {
+    pub unsafe fn new(array: [T; N]) -> Self {
         Self { array }
     }
 }
@@ -33,7 +33,7 @@ pub struct UncheckedVec<T> {
 
 impl<T> UncheckedVec<T> {
     /// Naurr
-    pub fn new(vec: Vec<T>) -> Self {
+    pub unsafe fn new(vec: Vec<T>) -> Self {
         Self { vec }
     }
 

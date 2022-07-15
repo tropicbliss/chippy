@@ -56,21 +56,21 @@ pub struct CPU {
 impl CPU {
     pub async fn new() -> Self {
         Self {
-            registers: UncheckedArray::new([0; 16]),
+            registers: unsafe { UncheckedArray::new([0; 16]) },
             program_counter: 0x200,
-            memory: UncheckedArray::new([0; 4096]),
-            stack: UncheckedArray::new([0; 16]),
+            memory: unsafe { UncheckedArray::new([0; 4096]) },
+            stack: unsafe { UncheckedArray::new([0; 16]) },
             stack_pointer: 0,
             sound_timer: 0,
             delay_timer: 0,
             index_register: 0,
-            framebuffer: UncheckedVec::new(vec![false; 64 * 32]),
+            framebuffer: unsafe { UncheckedVec::new(vec![false; 64 * 32]) },
             sound: unsafe {
                 audio::load_sound_from_bytes(BEEP_SOUND)
                     .await
                     .unwrap_unchecked()
             },
-            keys: UncheckedArray::new([false; 16]),
+            keys: unsafe { UncheckedArray::new([false; 16]) },
             display_width: 64,
             display_height: 32,
         }
@@ -122,8 +122,9 @@ impl CPU {
                     self.display_width = 64;
                     self.display_height = 64;
                     opcode = 0x12C0;
-                    self.framebuffer =
-                        UncheckedVec::new(vec![false; self.display_height * self.display_width]);
+                    self.framebuffer = unsafe {
+                        UncheckedVec::new(vec![false; self.display_height * self.display_width])
+                    };
                 }
                 let op_1 = (opcode & 0xF000) >> 12;
                 let op_2 = (opcode & 0x0F00) >> 8;
