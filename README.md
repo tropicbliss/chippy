@@ -1,5 +1,7 @@
 # chippy
 
+![Chippy](https://cdn.discordapp.com/attachments/851477065051406339/998592492456910949/Screenshot_2022-07-18_220926.png)
+
 Chippy is a cross-platform CHIP-8 emulator that aims to be simple and lightweight. It has audio and input support, and comes with hires ROM support and a debug menu as a bonus.
 
 ## Usage
